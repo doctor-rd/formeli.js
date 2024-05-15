@@ -23,6 +23,10 @@ function* tokenizer(expr) {
             yield new Token(m[0], TokenType.Number);
             continue;
         }
+        if ((m = str.match(/^pi/)) != null) {
+            yield new Token(m[0], TokenType.Number);
+            continue;
+        }
         if ((m = str.match(/^[-\+\*\/()]/)) != null) {
             yield new Token(m[0], TokenType.None);
             continue;
