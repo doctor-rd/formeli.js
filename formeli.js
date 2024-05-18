@@ -61,13 +61,17 @@ function ev_mul(g) {
     let result = 1;
     let inverse = false;
     let n;
+    let expect_rhs = false;
+    let sign = 1;
     while (!(n = g.next()).done) {
         switch (n.value.type) {
             case TokenType.None:
                 switch (n.value.val) {
                     case "*":
+                        expect_rhs = true;
                         break;
                     case "/":
+                        expect_rhs = true;
                         inverse = !inverse;
                         break;
                     case "(":
@@ -76,14 +80,21 @@ function ev_mul(g) {
                             result /= ev_primary(g);
                         else
                             result *= ev_primary(g);
+                        expect_rhs = false;
                         inverse = false;
                         break;
                     case "+":
+                        if (expect_rhs) {
+                            break;
+                        }
                     case "-":
+                        if (expect_rhs) {
+                            sign *= -1;
+                            break;
+                        }
                     case ")":
                         g.unnext();
-                        return result;
-                        break;
+                        return sign*result;
                     default:
                         console.log("parse error at", n.value.val);
                 }
@@ -94,11 +105,12 @@ function ev_mul(g) {
                     result /= ev_primary(g);
                 else
                     result *= ev_primary(g);
+                expect_rhs = false;
                 inverse = false;
                 break;
         }
     }
-    return result;
+    return sign*result;
 }
 
 function ev_add(g) {
@@ -123,7 +135,6 @@ function ev_add(g) {
                     case ")":
                         g.unnext();
                         return result;
-                        break;
                     default:
                         console.log("parse error at", n.value.val);
                 }
