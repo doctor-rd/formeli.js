@@ -27,7 +27,7 @@ function* tokenizer(expr) {
             yield new Token(m[0], TokenType.Number);
             continue;
         }
-        if ((m = str.match(/^[-\+\*\/()]/)) != null) {
+        if ((m = str.match(/^[-\+\*\/\^()]/)) != null) {
             yield new Token(m[0], TokenType.None);
             continue;
         }
@@ -57,6 +57,48 @@ function ev_primary(g) {
     }
 }
 
+function ev_pow(g, lhs_sign = 1) {
+    let lhs = lhs_sign*ev_primary(g);
+    let n;
+    let expect_rhs = false;
+    let sign = 1;
+    while (!(n = g.next()).done) {
+        switch (n.value.type) {
+            case TokenType.None:
+                switch (n.value.val) {
+                    case "^":
+                        expect_rhs = true;
+                        break;
+                    case "(":
+                        if (expect_rhs) {
+                            g.unnext();
+                            return Math.pow(lhs, ev_pow(g, sign));
+                        }
+                    case "+":
+                        if (expect_rhs) {
+                            break;
+                        }
+                    case "-":
+                        if (expect_rhs) {
+                            sign *= -1;
+                            break;
+                        }
+                    default:
+                        g.unnext();
+                        return lhs;
+                }
+                break;
+            case TokenType.Number:
+                g.unnext();
+                if (expect_rhs) {
+                    return Math.pow(lhs, ev_pow(g, sign));
+                }
+                return lhs;
+        }
+    }
+    return lhs;
+}
+
 function ev_mul(g) {
     let result = 1;
     let inverse = false;
@@ -77,9 +119,9 @@ function ev_mul(g) {
                     case "(":
                         g.unnext();
                         if (inverse)
-                            result /= ev_primary(g);
+                            result /= ev_pow(g);
                         else
-                            result *= ev_primary(g);
+                            result *= ev_pow(g);
                         expect_rhs = false;
                         inverse = false;
                         break;
@@ -102,9 +144,9 @@ function ev_mul(g) {
             case TokenType.Number:
                 g.unnext();
                 if (inverse)
-                    result /= ev_primary(g);
+                    result /= ev_pow(g);
                 else
-                    result *= ev_primary(g);
+                    result *= ev_pow(g);
                 expect_rhs = false;
                 inverse = false;
                 break;
