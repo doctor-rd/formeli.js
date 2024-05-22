@@ -1,6 +1,20 @@
+class Func {
+    constructor(name, f) {
+        this.name = name;
+        this.f = f;
+    }
+}
+
+const Functions = [
+    new Func("sin", Math.sin),
+    new Func("cos", Math.cos),
+    new Func("tan", Math.tan),
+]
+
 const TokenType = {
     None: 0,
     Number: 1,
+    Function: 2,
 }
 
 class Token {
@@ -8,6 +22,13 @@ class Token {
         this.val = val;
         this.type = type;
     }
+}
+
+function getFunction(str) {
+    for (let i=0; i<Functions.length; i++)
+        if (str.startsWith(Functions[i].name))
+            return Functions[i];
+    return null;
 }
 
 function* tokenizer(expr) {
@@ -19,6 +40,11 @@ function* tokenizer(expr) {
         if (pos >= expr.length)
             break;
         let str = expr.substring(pos);
+        if ((m = getFunction(str)) != null) {
+            yield new Token(m.name, TokenType.Function);
+            m = [m.name];
+            continue;
+        }
         if ((m = str.match(/^[\d.]+/)) != null) {
             yield new Token(m[0], TokenType.Number);
             continue;
@@ -43,6 +69,34 @@ function ev_primary(g) {
             if (n.value.val == "pi")
                 return Math.PI;
             return parseFloat(n.value.val);
+        case TokenType.Function:
+            console.log("ev Function");
+            let f = getFunction(n.value.val).f;
+            let sign = 1;
+            while (!(n = g.next()).done) {
+                switch (n.value.type) {
+                    case TokenType.None:
+                        switch (n.value.val) {
+                            case "/":
+                                g.unnext();
+                                return f(sign*ev_mul(g));
+                            case "(":
+                                g.unnext();
+                                return f(sign*ev_primary(g));
+                            case "-":
+                                sign *= -1;
+                                break;
+                        }
+                        break;
+                    case TokenType.Number:
+                        g.unnext();
+                        return f(sign*ev_mul(g));
+                    case TokenType.Function:
+                        g.unnext();
+                        return f(sign*ev_primary(g));
+                }
+            }
+            return f(0);
         case TokenType.None:
             if (n.value.val == "(") {
                 let result = ev_add(g);
@@ -88,6 +142,7 @@ function ev_pow(g, lhs_sign = 1) {
                         return lhs;
                 }
                 break;
+            case TokenType.Function:
             case TokenType.Number:
                 g.unnext();
                 if (expect_rhs) {
@@ -141,6 +196,7 @@ function ev_mul(g) {
                         console.log("parse error at", n.value.val);
                 }
                 break;
+            case TokenType.Function:
             case TokenType.Number:
                 g.unnext();
                 if (inverse)
@@ -181,6 +237,7 @@ function ev_add(g) {
                         console.log("parse error at", n.value.val);
                 }
                 break;
+            case TokenType.Function:
             case TokenType.Number:
                 g.unnext();
                 result += sign*ev_mul(g);
