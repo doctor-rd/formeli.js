@@ -40,6 +40,9 @@ function* tokenizer(expr) {
         if (pos >= expr.length)
             break;
         let str = expr.substring(pos);
+        if ((m = str.match(/^\s/)) != null) {
+            continue;
+        }
         if ((m = getFunction(str)) != null) {
             yield new Token(m.name, TokenType.Function);
             m = [m.name];
