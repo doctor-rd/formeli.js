@@ -6,6 +6,7 @@ class Func {
 }
 
 const Functions = [
+    new Func("sqrt", Math.sqrt),
     new Func("sin", Math.sin),
     new Func("cos", Math.cos),
     new Func("tan", Math.tan),
