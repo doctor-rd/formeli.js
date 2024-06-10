@@ -45,6 +45,10 @@ function* tokenizer(expr) {
             m = [m.name];
             continue;
         }
+        if ((m = str.match(/^e/)) != null) {
+            yield new Token(m[0], TokenType.Number);
+            continue;
+        }
         if ((m = str.match(/^[\d.]+/)) != null) {
             yield new Token(m[0], TokenType.Number);
             continue;
@@ -68,6 +72,8 @@ function ev_primary(g) {
         case TokenType.Number:
             if (n.value.val == "pi")
                 return Math.PI;
+            if (n.value.val == "e")
+                return Math.E;
             return parseFloat(n.value.val);
         case TokenType.Function:
             console.log("ev Function");
