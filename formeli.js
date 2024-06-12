@@ -80,7 +80,6 @@ function ev_primary(g) {
                 return Math.E;
             return parseFloat(n.value.val);
         case TokenType.Function:
-            console.log("ev Function");
             let f = getFunction(n.value.val).f;
             let sign = 1;
             while (!(n = g.next()).done) {
