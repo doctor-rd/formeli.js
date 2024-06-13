@@ -10,6 +10,8 @@ const Functions = [
     new Func("sin", Math.sin),
     new Func("cos", Math.cos),
     new Func("tan", Math.tan),
+    new Func("exp", Math.exp),
+    new Func("ln", Math.log),
 ]
 
 const TokenType = {
