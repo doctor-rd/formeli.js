@@ -18,6 +18,7 @@ const TokenType = {
     None: 0,
     Number: 1,
     Function: 2,
+    Variable: 3,
 }
 
 class Token {
@@ -44,6 +45,10 @@ function* tokenizer(expr) {
             break;
         let str = expr.substring(pos);
         if ((m = str.match(/^\s/)) != null) {
+            continue;
+        }
+        if ((m = str.match(/^[xyzt]/)) != null) {
+            yield new Token(m[0], TokenType.Variable);
             continue;
         }
         if ((m = getFunction(str)) != null) {
@@ -103,6 +108,8 @@ function multiply(a, sign) {
 function parse_primary(g) {
     let n = g.next();
     switch (n.value.type) {
+        case TokenType.Variable:
+            return {"type": "var", "name": n.value.val};
         case TokenType.Number:
             return {"type": "num", "value": n.value.val};
         case TokenType.Function:
@@ -123,6 +130,7 @@ function parse_primary(g) {
                                 break;
                         }
                         break;
+                    case TokenType.Variable:
                     case TokenType.Number:
                         g.unnext();
                         return {"type": "fct", "name": fname, "par": multiply(parse_mul(g), sign)};
@@ -182,6 +190,7 @@ function parse_pow(g, lhs_sign = 1) {
                         return lhs;
                 }
                 break;
+            case TokenType.Variable:
             case TokenType.Function:
             case TokenType.Number:
                 g.unnext();
@@ -244,6 +253,7 @@ function parse_mul(g) {
                         console.log("parse error at", n.value.val);
                 }
                 break;
+            case TokenType.Variable:
             case TokenType.Function:
             case TokenType.Number:
                 g.unnext();
@@ -295,6 +305,7 @@ function parse_add(g) {
                         console.log("parse error at", n.value.val);
                 }
                 break;
+            case TokenType.Variable:
             case TokenType.Function:
             case TokenType.Number:
                 g.unnext();
@@ -349,6 +360,8 @@ function ev(tree) {
         case "fct":
             const f = getFunction(tree.name).f;
             return f(ev(tree.par));
+        case "var":
+            return 0;
         case "num":
             if (tree.value == "pi")
                 return Math.PI;
