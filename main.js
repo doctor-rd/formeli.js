@@ -1,4 +1,5 @@
-import ev from './formeli.js';
+import * as formeli from './formeli.js';
 
 const expr = process.argv[2];
-console.log(ev(expr));
+const tree = formeli.parse(expr);
+console.log(formeli.ev(tree));

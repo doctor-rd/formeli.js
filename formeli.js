@@ -72,17 +72,41 @@ function* tokenizer(expr) {
     }
 }
 
-function ev_primary(g) {
+function simplify(x) {
+    switch (x.type) {
+        case "add":
+            if (x.adds.length == 0)
+                return {"type": "num", "value": 0};
+            if (x.adds.length == 1)
+                return x.adds[0];
+            break;
+        case "mul":
+            if (x.muls.length == 0)
+                return {"type": "num", "value": 1};
+            if (x.muls.length == 1)
+                return x.muls[0];
+            break;
+    }
+    return x;
+}
+
+function multiply(a, sign) {
+    if (sign>0)
+        return a;
+    let muls = [a];
+    if (a.type == "mul")
+        muls = Array.from(a.muls);
+    muls.push({"type": "num", "value": -1});
+    return {"type": "mul", "muls": muls};
+}
+
+function parse_primary(g) {
     let n = g.next();
     switch (n.value.type) {
         case TokenType.Number:
-            if (n.value.val == "pi")
-                return Math.PI;
-            if (n.value.val == "e")
-                return Math.E;
-            return parseFloat(n.value.val);
+            return {"type": "num", "value": n.value.val};
         case TokenType.Function:
-            let f = getFunction(n.value.val).f;
+            let fname = n.value.val;
             let sign = 1;
             while (!(n = g.next()).done) {
                 switch (n.value.type) {
@@ -90,10 +114,10 @@ function ev_primary(g) {
                         switch (n.value.val) {
                             case "/":
                                 g.unnext();
-                                return f(sign*ev_mul(g));
+                                return {"type": "fct", "name": fname, "par": multiply(parse_mul(g), sign)};
                             case "(":
                                 g.unnext();
-                                return f(sign*ev_primary(g));
+                                return {"type": "fct", "name": fname, "par": multiply(parse_primary(g), sign)};
                             case "-":
                                 sign *= -1;
                                 break;
@@ -101,16 +125,16 @@ function ev_primary(g) {
                         break;
                     case TokenType.Number:
                         g.unnext();
-                        return f(sign*ev_mul(g));
+                        return {"type": "fct", "name": fname, "par": multiply(parse_mul(g), sign)};
                     case TokenType.Function:
                         g.unnext();
-                        return f(sign*ev_primary(g));
+                        return {"type": "fct", "name": fname, "par": multiply(parse_primary(g), sign)};
                 }
             }
-            return f(0);
+            return {"type": "fct", "name": fname, "par": {"type": "num", "value": 0}};
         case TokenType.None:
             if (n.value.val == "(") {
-                let result = ev_add(g);
+                let result = parse_add(g);
                 n = g.next();
                 if (n.value.val != ")")
                     console.log(") expected");
@@ -122,8 +146,13 @@ function ev_primary(g) {
     }
 }
 
-function ev_pow(g, lhs_sign = 1) {
-    let lhs = lhs_sign*ev_primary(g);
+function parse_pow(g, lhs_sign = 1) {
+    let result = function() {
+        if (lhs.type == "num" && lhs.value == "e")
+            return {"type": "fct", "name": "exp", "par": parse_pow(g, sign)};
+        return {"type": "pow", "lhs": lhs, "rhs": parse_pow(g, sign)};
+    }
+    let lhs = multiply(parse_primary(g), lhs_sign);
     let n;
     let expect_rhs = false;
     let sign = 1;
@@ -137,7 +166,7 @@ function ev_pow(g, lhs_sign = 1) {
                     case "(":
                         if (expect_rhs) {
                             g.unnext();
-                            return Math.pow(lhs, ev_pow(g, sign));
+                            return result();
                         }
                     case "+":
                         if (expect_rhs) {
@@ -157,7 +186,7 @@ function ev_pow(g, lhs_sign = 1) {
             case TokenType.Number:
                 g.unnext();
                 if (expect_rhs) {
-                    return Math.pow(lhs, ev_pow(g, sign));
+                    return result();
                 }
                 return lhs;
         }
@@ -165,8 +194,16 @@ function ev_pow(g, lhs_sign = 1) {
     return lhs;
 }
 
-function ev_mul(g) {
-    let result = 1;
+function parse_mul(g) {
+    let result = function() {
+        let lhs = multiply(mul, sign);
+        if (div.muls.length == 0)
+            return simplify(lhs);
+        else
+            return {"type": "div", "lhs": simplify(lhs), "rhs": simplify(div)};
+    }
+    let mul = {"type": "mul", "muls":[]};
+    let div = {"type": "mul", "muls":[]};
     let inverse = false;
     let n;
     let expect_rhs = false;
@@ -185,9 +222,9 @@ function ev_mul(g) {
                     case "(":
                         g.unnext();
                         if (inverse)
-                            result /= ev_pow(g);
+                            div.muls.push(parse_pow(g));
                         else
-                            result *= ev_pow(g);
+                            mul.muls.push(parse_pow(g));
                         expect_rhs = false;
                         inverse = false;
                         break;
@@ -202,7 +239,7 @@ function ev_mul(g) {
                         }
                     case ")":
                         g.unnext();
-                        return sign*result;
+                        return result();
                     default:
                         console.log("parse error at", n.value.val);
                 }
@@ -211,19 +248,26 @@ function ev_mul(g) {
             case TokenType.Number:
                 g.unnext();
                 if (inverse)
-                    result /= ev_pow(g);
+                    div.muls.push(parse_pow(g));
                 else
-                    result *= ev_pow(g);
+                    mul.muls.push(parse_pow(g));
                 expect_rhs = false;
                 inverse = false;
                 break;
         }
     }
-    return sign*result;
+    return result();
 }
 
-function ev_add(g) {
-    let result = 0;
+function parse_add(g) {
+    let result = function() {
+        if (sub.adds.length == 0)
+            return simplify(add);
+        else
+            return {"type": "sub", "lhs": simplify(add), "rhs": simplify(sub)};
+    }
+    let add = {"type": "add", "adds":[]};
+    let sub = {"type": "add", "adds":[]};
     let sign = 1;
     let n;
     while (!(n = g.next()).done) {
@@ -238,12 +282,15 @@ function ev_add(g) {
                     case "/":
                     case "(":
                         g.unnext();
-                        result += sign*ev_mul(g);
+                        if (sign>0)
+                            add.adds.push(parse_mul(g));
+                        else
+                            sub.adds.push(parse_mul(g));
                         sign = 1;
                         break;
                     case ")":
                         g.unnext();
-                        return result;
+                        return result();
                     default:
                         console.log("parse error at", n.value.val);
                 }
@@ -251,15 +298,18 @@ function ev_add(g) {
             case TokenType.Function:
             case TokenType.Number:
                 g.unnext();
-                result += sign*ev_mul(g);
+                if (sign>0)
+                    add.adds.push(parse_mul(g));
+                else
+                    sub.adds.push(parse_mul(g));
                 sign = 1;
                 break;
         }
     }
-    return result;
+    return result();
 }
 
-function ev(expr) {
+function parse(expr) {
     let g = tokenizer(expr);
     g.nextorig = g.next;
     g.repeat = 0;
@@ -274,7 +324,39 @@ function ev(expr) {
     g.unnext = function() {
         g.repeat = 1;
     }
-    return ev_add(g);
+    return parse_add(g);
 }
 
-export default ev;
+function ev(tree) {
+    let result;
+    switch (tree.type) {
+        case "add":
+            result = 0;
+            for (let i=0; i<tree.adds.length; i++)
+                result += ev(tree.adds[i]);
+            break;
+        case "sub":
+            return ev(tree.lhs) - ev(tree.rhs);
+        case "mul":
+            result = 1;
+            for (let i=0; i<tree.muls.length; i++)
+                result *= ev(tree.muls[i]);
+            break;
+        case "div":
+            return ev(tree.lhs) / ev(tree.rhs);
+        case "pow":
+            return Math.pow(ev(tree.lhs), ev(tree.rhs));
+        case "fct":
+            const f = getFunction(tree.name).f;
+            return f(ev(tree.par));
+        case "num":
+            if (tree.value == "pi")
+                return Math.PI;
+            if (tree.value == "e")
+                return Math.E;
+            return parseFloat(tree.value);
+    }
+    return result;
+}
+
+export {parse, ev};
