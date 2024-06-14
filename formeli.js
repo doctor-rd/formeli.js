@@ -12,14 +12,14 @@ const Functions = [
     new Func("tan", Math.tan),
     new Func("exp", Math.exp),
     new Func("ln", Math.log),
-]
+];
 
 const TokenType = {
     None: 0,
     Number: 1,
     Function: 2,
     Variable: 3,
-}
+};
 
 class Token {
     constructor(val, type) {
