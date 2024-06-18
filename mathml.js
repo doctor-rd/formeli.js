@@ -47,7 +47,7 @@ function mathml(tree, p=0) {
                 case "sqrt":
                     return "<msqrt><mrow>" + mathml(tree.par) + "</mrow></msqrt>";
             }
-            return "<mi>" + fname + "</mi>" + mathml(tree.par, 2);
+            return mml_open(p>1) + "<mi>" + fname + "</mi>" + mathml(tree.par, 2) + mml_close(p>1);
         case "var":
             return "<mi>" + tree.name + "</mi>";
         case "num":
