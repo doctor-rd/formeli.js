@@ -40,7 +40,7 @@ function mathml(tree, p=0) {
         case "div":
             return "<mfrac><mrow>" + mathml(tree.lhs) + "</mrow><mrow>" + mathml(tree.rhs) + "</mrow></mfrac>";
         case "pow":
-            return "<msup><mrow>" + mathml(tree.lhs, 2) + "</mrow><mrow>" + mathml(tree.rhs) + "</mrow></msup>";
+            return mml_open(p>2) + "<msup><mrow>" + mathml(tree.lhs, 3) + "</mrow><mrow>" + mathml(tree.rhs) + "</mrow></msup>" + mml_close(p>2);
         case "fct":
             let fname = tree.name;
             switch (fname) {
