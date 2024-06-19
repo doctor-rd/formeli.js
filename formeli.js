@@ -47,13 +47,13 @@ function* tokenizer(expr) {
         if ((m = str.match(/^\s/)) != null) {
             continue;
         }
-        if ((m = str.match(/^[xyzt]/)) != null) {
-            yield new Token(m[0], TokenType.Variable);
-            continue;
-        }
         if ((m = getFunction(str)) != null) {
             yield new Token(m.name, TokenType.Function);
             m = [m.name];
+            continue;
+        }
+        if ((m = str.match(/^[xyzt]/)) != null) {
+            yield new Token(m[0], TokenType.Variable);
             continue;
         }
         if ((m = str.match(/^e/)) != null) {
