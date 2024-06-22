@@ -372,4 +372,64 @@ function ev(tree) {
     return result;
 }
 
-export {parse, ev};
+function js(tree) {
+    let result;
+    switch (tree.type) {
+        case "add":
+            result = "0";
+            for (let i=0; i<tree.adds.length; i++) {
+                if (result == "0")
+                    result = "(";
+                else
+                    result += "+";
+                result += js(tree.adds[i]);
+            }
+            if (result != "0")
+                result += ")";
+            break;
+        case "sub":
+            return "(" + js(tree.lhs) + "-" + js(tree.rhs) + ")";
+        case "mul":
+            result = "1";
+            for (let i=0; i<tree.muls.length; i++) {
+                if (result == "1")
+                    result = "(";
+                else
+                    result += "*";
+                result += js(tree.muls[i]);
+            }
+            if (result != "1")
+                result += ")";
+            break;
+        case "div":
+            return "(" + js(tree.lhs) + "/" + js(tree.rhs) + ")";
+        case "pow":
+            return "Math.pow(" + js(tree.lhs) + "," + js(tree.rhs) + ")";
+        case "fct":
+            let fname = tree.name;
+            switch (fname) {
+                case "ln":
+                    fname = "log";
+                    break;
+            }
+            return "Math." + fname + "(" + js(tree.par) + ")";
+        case "var":
+            return "par." + tree.name;
+        case "num":
+            result = "" + tree.value;
+            if (tree.value == "pi")
+                return "Math.PI";
+            if (tree.value == "e")
+                return "Math.E";
+            if (result.startsWith("-"))
+                return "(" + result + ")";
+            break;
+    }
+    return result;
+}
+
+function func(tree) {
+    return new Function("par", "return " + js(tree) + ";");
+}
+
+export {parse, ev, func};
