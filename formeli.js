@@ -12,6 +12,7 @@ const Functions = [
     new Func("tan", Math.tan),
     new Func("exp", Math.exp),
     new Func("ln", Math.log),
+    new Func("abs", Math.abs),
 ];
 
 const TokenType = {

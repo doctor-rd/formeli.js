@@ -46,6 +46,8 @@ function mathml(tree, p=0) {
             switch (fname) {
                 case "sqrt":
                     return "<msqrt><mrow>" + mathml(tree.par) + "</mrow></msqrt>";
+                case "abs":
+                    return "<mrow><mo>|</mo>" + mathml(tree.par) + "<mo>|</mo></mrow>";
             }
             let dop = true;
             switch (tree.par.type) {
