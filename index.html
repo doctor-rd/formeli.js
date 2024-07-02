@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <title>formeli.js</title>
+  </head>
+  <body>
+    <h1>formeli.js</h1>
+    <table>
+      <tr><td>Expression:</td><td><input value="1+1" id="exprin"></input></td></tr>
+      <tr><td>Result:</td><td><math xmlns="http://www.w3.org/1998/Math/MathML" id="exprout"></math></td></tr>
+    </table>
+    <script type="module">
+      import {parse, ev} from './formeli.js'
+      import {mathml} from './mathml.js';
+      const exprout = document.getElementById("exprout");
+      const exprin = document.getElementById("exprin");
+
+      function calc() {
+        const tree = parse(exprin.value);
+        exprout.innerHTML = mathml(tree) + "<mo>=</mo><mn>" + ev(tree) + "</mn>";
+      }
+      calc();
+      exprin.onchange = calc;
+    </script>
+  </body>
+</html>
