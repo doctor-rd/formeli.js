@@ -143,7 +143,7 @@ function parse_primary(g) {
             return {"type": "fct", "name": fname, "par": {"type": "num", "value": 0}};
         case TokenType.None:
             if (n.value.val == "(") {
-                let result = parse_add(g);
+                let result = parse_tuple(g);
                 n = g.next();
                 if (n.value.val != ")")
                     console.log(") expected");
@@ -324,7 +324,14 @@ function parse_add(g) {
 }
 
 function parse_tuple(g) {
-    let result = {"type": "tuple", "comps":[]};
+    let result = function() {
+        if (comps.length==0)
+            return {"type": "num", "value": 0};
+        if (comps.length==1)
+            return comps[0];
+        return {"type": "tuple", "comps": comps};
+    }
+    let comps = [];
     let n;
     while (!(n = g.next()).done) {
         switch (n.value.type) {
@@ -334,21 +341,21 @@ function parse_tuple(g) {
                         break;
                     case ")":
                         g.unnext();
-                        return result;
+                        return result();
                     default:
                         g.unnext();
-                        result.comps.push(parse_add(g));
+                        comps.push(parse_add(g));
                 }
                 break;
             case TokenType.Variable:
             case TokenType.Function:
             case TokenType.Number:
                 g.unnext();
-                result.comps.push(parse_add(g));
+                comps.push(parse_add(g));
                 break;
         }
     }
-    return result;
+    return result();
 }
 
 function parse(expr) {
@@ -366,7 +373,7 @@ function parse(expr) {
     g.unnext = function() {
         g.repeat = 1;
     }
-    return parse_add(g);
+    return parse_tuple(g);
 }
 
 function ev(tree) {
