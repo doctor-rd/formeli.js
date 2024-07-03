@@ -13,6 +13,8 @@ const Functions = [
     new Func("exp", Math.exp),
     new Func("ln", Math.log),
     new Func("abs", Math.abs),
+    new Func("min", Math.min),
+    new Func("max", Math.max),
 ];
 
 const TokenType = {
@@ -397,6 +399,8 @@ function ev(tree) {
             return Math.pow(ev(tree.lhs), ev(tree.rhs));
         case "fct":
             const f = getFunction(tree.name).f;
+            if (tree.par.type=="tuple")
+                return f(...tree.par.comps.map((c) => ev(c)));
             return f(ev(tree.par));
         case "var":
             return 0;
@@ -449,6 +453,18 @@ function js(tree) {
                 case "ln":
                     fname = "log";
                     break;
+            }
+            if (tree.par.type=="tuple") {
+                result = "";
+                for (let i=0; i<tree.par.comps.length; i++) {
+                    if (result == "")
+                        result = "Math." + fname + "(";
+                    else
+                        result += ",";
+                    result += js(tree.par.comps[i]);
+                }
+                result += ")";
+                return result;
             }
             return "Math." + fname + "(" + js(tree.par) + ")";
         case "var":
