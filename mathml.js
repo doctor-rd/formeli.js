@@ -11,6 +11,18 @@ function mml_close(p) {
 function mathml(tree, p=0) {
     let result;
     switch (tree.type) {
+        case "tuple":
+            result = "<mo>()</mo>";
+            for (let i=0; i<tree.comps.length; i++) {
+                if (result == "<mo>()</mo>")
+                    result = mml_open(true);
+                else
+                    result += "<mo>,</mo>";
+                result += mathml(tree.comps[i]);
+            }
+            if (result != "<mo>()</mo>")
+                result += mml_close(true);
+            break;
         case "add":
             result = "0";
             for (let i=0; i<tree.adds.length; i++) {

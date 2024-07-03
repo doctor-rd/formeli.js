@@ -69,7 +69,7 @@ function* tokenizer(expr) {
             yield new Token(m[0], TokenType.Number);
             continue;
         }
-        if ((m = str.match(/^[-\+\*\/\^()]/)) != null) {
+        if ((m = str.match(/^[-\+\*\/\^(),]/)) != null) {
             yield new Token(m[0], TokenType.None);
             continue;
         }
@@ -247,6 +247,7 @@ function parse_mul(g) {
                             sign *= -1;
                             break;
                         }
+                    case ",":
                     case ")":
                         g.unnext();
                         return result();
@@ -299,6 +300,7 @@ function parse_add(g) {
                             sub.adds.push(parse_mul(g));
                         sign = 1;
                         break;
+                    case ",":
                     case ")":
                         g.unnext();
                         return result();
@@ -319,6 +321,34 @@ function parse_add(g) {
         }
     }
     return result();
+}
+
+function parse_tuple(g) {
+    let result = {"type": "tuple", "comps":[]};
+    let n;
+    while (!(n = g.next()).done) {
+        switch (n.value.type) {
+            case TokenType.None:
+                switch (n.value.val) {
+                    case ",":
+                        break;
+                    case ")":
+                        g.unnext();
+                        return result;
+                    default:
+                        g.unnext();
+                        result.comps.push(parse_add(g));
+                }
+                break;
+            case TokenType.Variable:
+            case TokenType.Function:
+            case TokenType.Number:
+                g.unnext();
+                result.comps.push(parse_add(g));
+                break;
+        }
+    }
+    return result;
 }
 
 function parse(expr) {
